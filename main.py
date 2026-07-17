@@ -63,7 +63,7 @@ def parse_arguments():
     parser.add_argument(
         "--width",
         type=int,
-        default=None,
+        default=0,
         help="ASCII output width"
     )
 
@@ -72,6 +72,12 @@ def parse_arguments():
         type=int,
         default=3,
         help="buffer seconds"
+    )
+
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="show debug information"
     )
 
 
@@ -138,7 +144,7 @@ def main():
     # 렌더러
 
     renderer = Renderer(
-        width=ascii_width,
+        width=None if args.width <= 0 else args.width,
         color=not args.no_color
     )
 
@@ -276,6 +282,23 @@ def main():
                 time.sleep(
                     0.005
                 )
+        
+            renderer.draw(frame)
+
+            if audio:
+
+                draw_progress_bar(
+                    audio.get_position(),
+                    decoder.get_duration()
+                )
+
+            if args.debug:
+
+                draw_debug(
+                    audio.get_position() if audio else 0,
+                    timestamp,
+                    decoder.get_buffer_size()
+                )
 
 
     except Exception as e:
@@ -308,7 +331,74 @@ def main():
             "[INFO] Player closed"
         )
 
+def format_time(seconds):
 
+    seconds = int(seconds)
+
+    m = seconds // 60
+
+    s = seconds % 60
+
+    return f"{m:02}:{s:02}"
+
+
+import shutil
+
+def draw_progress_bar(current, duration):
+
+    cols, _ = shutil.get_terminal_size(
+        fallback=(120, 40)
+    )
+
+    width = max(20, cols - 20)
+
+    progress = 0
+
+    if duration > 0:
+        progress = current / duration
+
+    progress = max(0.0, min(progress, 1.0))
+
+    filled = int(progress * width)
+
+    bar = (
+        "█" * filled +
+        "░" * (width - filled)
+    )
+
+    sys.stdout.write("\n")
+
+    sys.stdout.write(
+        f"{bar} "
+        f"{format_time(current)}"
+        f"/"
+        f"{format_time(duration)}"
+    )
+
+    sys.stdout.flush()
+
+
+def draw_debug(
+    audio_time,
+    frame_time,
+    buffer_size
+):
+
+    sys.stdout.write("\n")
+
+    sys.stdout.write(
+        f"Audio : {audio_time:.3f}s\n"
+    )
+
+    sys.stdout.write(
+        f"Frame : {frame_time:.3f}s\n"
+    )
+
+    sys.stdout.write(
+        f"Buffer: {buffer_size}\n"
+    )
+
+    sys.stdout.flush()
 
 if __name__ == "__main__":
 

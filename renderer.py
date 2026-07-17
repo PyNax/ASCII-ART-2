@@ -1,5 +1,6 @@
 import cv2
 import sys
+import shutil
 
 
 # 밝기 순서 ASCII 문자
@@ -16,13 +17,59 @@ class Renderer:
 
     def __init__(
         self,
-        width=120,
+        width=None,
         color=True
     ):
 
         self.width = width
 
         self.color = color
+
+    def get_terminal_size(self):
+        """
+        현재 터미널 크기 반환
+        (columns, rows)
+        """
+        return shutil.get_terminal_size(
+            fallback=(120, 40)
+        )
+    
+    def calculate_size(
+        self,
+        frame
+    ):
+        """
+        현재 터미널 크기에 맞는
+        ASCII 출력 크기 계산
+        """
+
+        frame_height, frame_width = frame.shape[:2]
+
+        cols, rows = self.get_terminal_size()
+
+        # 플레이바 및 디버그용으로 3줄 예약
+        available_rows = max(rows - 3, 1)
+
+        # 가로 기준
+        width = cols
+
+        # 문자 높이 보정
+        height = int(
+            frame_height *
+            width /
+            frame_width *
+            0.45
+        )
+
+        # 화면보다 높으면 다시 계산
+        if height > available_rows:
+
+            scale = available_rows / height
+
+            height = available_rows
+            width = max(1, int(width * scale))
+
+        return width, height
 
 
 
@@ -32,16 +79,30 @@ class Renderer:
         터미널 출력 크기에 맞게 축소
         """
 
-        height, width = frame.shape[:2]
+        new_width = self.width
+        new_height = None
 
+        if new_width is None:
 
-        # 터미널 문자는 세로가 더 길기 때문에 보정
+            new_width, new_height = self.calculate_size(frame)
 
-        new_height = int(
-            height *
-            self.width /
-            width *
-            0.45
+        else:
+
+            frame_height, frame_width = frame.shape[:2]
+
+            new_height = int(
+                frame_height *
+                new_width /
+                frame_width *
+                0.45
+            )
+
+        new_height = max(new_height, 1)
+
+        return cv2.resize(
+            frame,
+            (new_width, new_height),
+            interpolation=cv2.INTER_AREA
         )
 
 

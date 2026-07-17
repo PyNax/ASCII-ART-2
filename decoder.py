@@ -40,6 +40,23 @@ class VideoDecoder:
 
             self.fps = 30
 
+        self.total_frames = int(
+            self.cap.get(
+                cv2.CAP_PROP_FRAME_COUNT
+            )
+        )
+
+
+        if self.fps > 0:
+
+            self.duration = (
+                self.total_frames /
+                self.fps
+            )
+
+        else:
+
+            self.duration = 0
 
 
         self.width = int(
@@ -73,6 +90,7 @@ class VideoDecoder:
 
 
         self.frame_index = 0
+        self.current_frame = 0
 
 
 
@@ -170,7 +188,11 @@ class VideoDecoder:
             return None
 
 
-        return self.buffer.get()
+        frame = self.buffer.get_nowait()
+
+        self.current_frame += 1
+
+        return frame
 
 
 
@@ -198,3 +220,26 @@ class VideoDecoder:
         if self.cap:
 
             self.cap.release()
+    
+    def get_duration(self):
+
+        return self.duration
+    
+    def get_total_frames(self):
+
+        return self.total_frames
+    
+    def get_current_frame(self):
+
+        return self.current_frame
+    
+    def get_progress(self):
+
+        if self.total_frames == 0:
+
+            return 0
+
+        return (
+            self.current_frame /
+            self.total_frames
+        )
